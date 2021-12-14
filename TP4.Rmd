@@ -1,0 +1,158 @@
+---
+title: "TD4 - Détection de nouveauté par One-class SVM et Kernel PCA"
+author: "Romain Dudoit, Franck Doronzo, Marie Vachet"
+date: "12/14/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1 Présentation de l'étude de cas
+
+Le cas à l'étude provient du domaine de la médecine et correspond  à des données sur le cancer du sein. 
+Ces observations ont été recueillies à l’hôpital de l’université de Wisconsin par le Dr. Wolberg. Il
+s’agit de prévoir si une tumeur est maligne ou bégnine à partir de différentes variables numériques. Le
+jeu de données est non équilibré avec une majorité de cas bénins (∼2/3). Cela nous donne l’occasion
+d’aborder la problématique sous l’angle de la détection de nouveauté qui est une tâche d’apprentissage
+particulière. L’objectif du TP est alors de mettre en oeuvre une méthode supervisée, le one-class SVM
+et une méthode non supervisée, le kernel PCA. Cette étude est tirée de l’article suivant : Hoffmann,
+H. (2007). Kernel PCA for novelty detection. Pattern Recognition, 40(3), 863-874 dont la version
+préliminaire est accessible à http://www.heikohoffmann.de/documents/hoffmann_kpca_preprint.pdf.
+
+
+
+# 2 Lecture et description des données
+
+```{r}
+setwd("D:/OneDrive/1_Universite/Master 2 Sise/S1/Data Mining - Apprentissage statistique/TP4")
+```
+
+```{r}
+D = read.table("breast-cancer-wisconsin.data",sep = ",", na.strings = "?")
+```
+
+
+```{r}
+print(class(D))
+print(str(D))
+```
+
+
+```{r}
+print(head(D))
+```
+
+
+```{r}
+summary(D)
+```
+
+# 3 Séparation des donneés en "train" et "test"
+
+Nous allons pré-traiter les données et séparer celles-ci en deux sous-ensembles disjoints. L’un sera utilisé pour l’apprentissage, l’autre pour le test.
+
+
+## 4. La variable D comporte des données manquantes. Identifiez les observations comportant au moins une donnée manquante à l’aide de la commande complete.cases. Vous devez identifier 16 cas.
+
+```{r}
+missval<-which(complete.cases(D)== F)
+# Retourne la liste des numéros d'observation comportant des valeurs manquantes 
+
+print(missval)
+print(length(missval))
+```
+
+## 5. Modifiez D de sorte à ce qu'il ne possède que des données complètes
+
+```{r}
+D<-D[which(complete.cases(D)),]
+```
+
+## 6. Stockez dans la variable X les variables explicatives qui concernent les colonnes 2 à 10 (inclus) de D. 
+La variable cible sera stockée dans la variable y qui est donnée par la colonne 11 de D.
+
+```{r}
+X<-D[,c(2:10)]
+y<-D[,11]
+```
+
+## 7. Recodez y de sorte à ce que les valeurs 2 deviennent des 0 (bégnine) et les valeurs 4 deviennent des 1 (maligne).
+
+```{r}
+y<-factor(y)
+levels(y) <- c(0,1)
+```
+
+
+## 8. Stockez dans la variable benin (resp. malin) les indices des observations correspondant à des
+tumeurs bégnines (resp. maligne). Vous pourrez utiliser pour cela la commande which.
+
+```{r}
+benin<-which(y==0)
+malin<-which(y==1)
+```
+
+## 9. Nous garderons dans l’ensemble d’entraınement uniquement les 200 premières observations bégnines. 
+Stockez dans la variable train_set ces 200 observations. Dans l’ensemble de test vous garderez les observations bégnines qui ne sont pas dans l’ensemble d’entrainement et toutes les observations malignes. Vous stockerez les indices des observations de test dans la variable test set.
+
+```{r}
+train_set <- head(benin,200)
+Xtrain <- X[train_set,]
+ytrain<- y[train_set]
+
+test_set <- c(benin[201:444],malin)
+Xtest <- X[test_set,]
+ytest <-y[test_set]
+```
+
+
+# 4 One-class SVM
+
+## 10. Chargez la librairie e1071.
+
+```{r}
+library(e1071)
+```
+
+## 11 Stockez dans la variable oc_svm_fit les résultats de l’estimation du modèle à partir de l’ensemble d’entraînement. 
+Vous utiliserez pour cela la commande svm. Vous utiliserez un noyau gaussien de paramètre gamma = 1/2, vous indiquerez que le type de modèle est one-classification.
+
+```{r}
+oc_svm_fit <- svm(as.matrix(X[train_set,]),y=NULL,kernel = "radial", type ="one-classification" , gamma = 1/2)
+oc_svm_fit
+```
+## 12 A l’aide du modèle estimé stocké dans oc svm fit, vous prédirez les scores des observations de test. 
+Pour cela, utilisez la commande predict et vous indiquerez de façcon adéquate le paramètre decision.values.
+
+```{r}
+oc_svm_pred_test  <- predict(oc_svm_fit, X[test_set,],decision.values = TRUE)
+```
+
+## 13. Entrez, exécutez et commentez les commandes suivantes : 
+
+attr ( oc_svm_pred_test ," decision . values ")
+oc_svm_score_test = - as . numeric ( attr ( oc_svm_pred_test ," decision .values ") )
+
+```{r}
+attr (oc_svm_pred_test ," decision . values ")
+oc_svm_score_test = -as.numeric(attr(oc_svm_pred_test," decision.values "))
+```
+# 5 Courbe ROC
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
+
+```{r}
+```
+
