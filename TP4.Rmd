@@ -26,7 +26,7 @@ préliminaire est accessible à http://www.heikohoffmann.de/documents/hoffmann_k
 # 2 Lecture et description des données
 
 ```{r}
-setwd("D:/OneDrive/1_Universite/Master 2 Sise/S1/Data Mining - Apprentissage statistique/TP4")
+#setwd("D:/OneDrive/1_Universite/Master 2 Sise/S1/Data Mining - Apprentissage statistique/TP4")
 ```
 
 ```{r}
