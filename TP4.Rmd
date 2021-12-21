@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # 1 Présentation de l'étude de cas
 
-Le cas à l'étude provient du domaine de la médecine et correspond  à des données sur le cancer du sein. 
+Le cas à l'étude provient du domaine de la médecine et correspond à des données sur le cancer du sein. 
 Ces observations ont été recueillies à l’hôpital de l’université de Wisconsin par le Dr. Wolberg. Il
 s’agit de prévoir si une tumeur est maligne ou bégnine à partir de différentes variables numériques. Le
 jeu de données est non équilibré avec une majorité de cas bénins (∼2/3). Cela nous donne l’occasion
@@ -26,7 +26,8 @@ préliminaire est accessible à http://www.heikohoffmann.de/documents/hoffmann_k
 # 2 Lecture et description des données
 
 ```{r}
-#setwd("D:/OneDrive/1_Universite/Master 2 Sise/S1/Data Mining - Apprentissage statistique/TP4")
+setwd(readClipboard())
+print(readClipboard())
 ```
 
 ```{r}
@@ -99,12 +100,12 @@ Stockez dans la variable train_set ces 200 observations. Dans l’ensemble de te
 
 ```{r}
 train_set <- head(benin,200)
-Xtrain <- X[train_set,]
-ytrain<- y[train_set]
+Xtrain <- as.matrix(X[train_set,])
+ytrain<- as.matrix(y[train_set])
 
 test_set <- c(benin[201:444],malin)
-Xtest <- X[test_set,]
-ytest <-y[test_set]
+Xtest <- as.matrix(X[test_set,])
+ytest <-as.matrix(y[test_set])
 ```
 
 
@@ -132,27 +133,128 @@ oc_svm_pred_test  <- predict(oc_svm_fit, X[test_set,],decision.values = TRUE)
 
 ## 13. Entrez, exécutez et commentez les commandes suivantes : 
 
-attr ( oc_svm_pred_test ," decision . values ")
-oc_svm_score_test = - as . numeric ( attr ( oc_svm_pred_test ," decision .values ") )
-
 ```{r}
-attr (oc_svm_pred_test ," decision . values ")
-oc_svm_score_test = -as.numeric(attr(oc_svm_pred_test," decision.values "))
+attr (oc_svm_pred_test ,"decision.values")
+oc_svm_score_test = -as.numeric(attr(oc_svm_pred_test,"decision.values"))
 ```
 # 5 Courbe ROC
 
+## 14. Charger la librairie ROCR
+## 15.Entrez, exécutez et commentez les commandes suivantes :
+
 ```{r}
+library(ROCR)
+pred_oc_svm=prediction(oc_svm_score_test,y[test_set])
+oc_svm_roc = performance(pred_oc_svm, measure = "tpr", x.measure = "fpr")
+plot(oc_svm_roc)
+```
+## 16. Commentez les performances du modèle.
+
+Commentaires
+
+
+# 6 Kernel PCA
+
+## 17. Entrez, exécutez et commentez les commandes suivantes :
+
+```{r}
+library(kernlab)
+kernel=rbfdot(sigma=1/8)
+Ktrain=kernelMatrix(kernel,as.matrix(X[train_set,]))
+```
+
+```{r}
+kernel
+```
+
+```{r}
+Ktrain
+```
+
+Commentaires
+
+## 18. Entrez, exécutez et commentez les commandes suivantes :
+
+```{r}
+k2=apply(Ktrain,1,sum) # lignes
+k3=apply(Ktrain,2,sum) # colonnes 
+k4=sum(Ktrain)
+KtrainCent=matrix(0,ncol=n,nrow=n)
+for (i in 1:n)
+  {
+    for (j in 1:n)
+      {
+        KtrainCent[i,j]=Ktrain[i,j]-1/n*k2[i]-1/n*k3[j]+1/n^2*k4
+      }
+}
+```
+
+En particulier faites le rapprochement entre les variables k2, k3 et k4 et l’équation (1)
+
+
+Commentaires
+
+
+## 19. Procéder à la décomposition spectrale de la matrice KtrainCent en utilisant la commande eigen. Vous stockerez le résultat dans la variable eigen_KtrainCent.
+
+```{r}
+eigen_KtrainCent = 
 ```
 
 
+## 20. On choisit de garder s = 80 axes principaux. Ainsi instanciez une variable s=80. Les coeﬃcients αm, ∀m = 1, . . . , 80 sont obtenus par la ligne de code suivante :
+
 ```{r}
+A=eigen_KtrainCent$vectors[,1:s]%*%diag(1/sqrt(
+  eigen_KtrainCent$values[1:s]))
+```
+
+## 21. Entrez, exécutez et commentez la commande suivante :
+
+```{r}
+K=kernelMatrix(kernel,X)
+```
+
+## 22. A partir de la variable K et en vous inspirant des questions (et indications) précédentes, instanciez dans les variables p1, p2 et p3 les 3 termes composants l’équation donnée en (4).
+
+```{r}
+
+```
+
+## 23. A partir des résultats précédents, stockez dans une variable ps le vecteur qui pour toute observation des données de test donne la quantité (4).
+
+```{r}
+ps = 
 ```
 
 
+## 24. A partir de la variable K et en vous inspirant des questions précédentes, instanciez dans les variables f1, f2, f3 et f4 les termes successifs de (5). Vous remarquerez que certains termes ont déjà été calculés précédemment.
+
 ```{r}
+
 ```
 
 
+## 25. A partir des résultats précédents, stockez dans une variable fl le vecteur qui pour toute observation des données de test donne la quantité (5) (Remarque : fl représente une matrice dont le
+nombre de lignes vaut le nombre de données tests et le nombre de colonne, le nombre d’axes principaux retenus).
+
 ```{r}
+
 ```
 
+
+## 26. A partir des résultats précédents, stockez dans une variable kpca score test le vecteur qui pour toute observation des donneés de test donne le score défini en (3).
+
+```{r}
+
+```
+
+
+## 27. Ecrivez le code qui à partir de la variable kpca score test permet d’obtenir la courbe ROC. Pour comparer la courbe avec celle du one-class SVM vous pourrez ajouter dans la commande
+plot le paramètre add=TRUE. Commentez le graphique obtenu.
+
+```{r}
+
+```
+
+Commentaires
