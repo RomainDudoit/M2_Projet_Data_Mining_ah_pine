@@ -179,6 +179,7 @@ Commentaires
 k2=apply(Ktrain,1,sum) # lignes
 k3=apply(Ktrain,2,sum) # colonnes 
 k4=sum(Ktrain)
+n=nrow(Ktrain)
 KtrainCent=matrix(0,ncol=n,nrow=n)
 for (i in 1:n)
   {
@@ -198,15 +199,18 @@ Commentaires
 ## 19. Procéder à la décomposition spectrale de la matrice KtrainCent en utilisant la commande eigen. Vous stockerez le résultat dans la variable eigen_KtrainCent.
 
 ```{r}
-eigen_KtrainCent = 
+eigen_KtrainCent = eigen(KtrainCent)
+eigen_KtrainCent
 ```
 
 
 ## 20. On choisit de garder s = 80 axes principaux. Ainsi instanciez une variable s=80. Les coeﬃcients αm, ∀m = 1, . . . , 80 sont obtenus par la ligne de code suivante :
 
 ```{r}
+s = 80
 A=eigen_KtrainCent$vectors[,1:s]%*%diag(1/sqrt(
   eigen_KtrainCent$values[1:s]))
+A
 ```
 
 ## 21. Entrez, exécutez et commentez la commande suivante :
@@ -218,20 +222,28 @@ K=kernelMatrix(kernel,X)
 ## 22. A partir de la variable K et en vous inspirant des questions (et indications) précédentes, instanciez dans les variables p1, p2 et p3 les 3 termes composants l’équation donnée en (4).
 
 ```{r}
-
+# calculer le premier  n  terme de la formule (4)
+p1=as.numeric(diag(K))
+# calculer le deuxieme terme de la formule (4)
+p2=as.numeric(-2/n*apply(as.matrix(K[,train_set]),1,sum))
+# calculer le troisieme terme de la formule (4)
+p3=as.numeric(1/(n^2)*sum(K[train_set,train_set]))
 ```
 
 ## 23. A partir des résultats précédents, stockez dans une variable ps le vecteur qui pour toute observation des données de test donne la quantité (4).
 
 ```{r}
-ps = 
+ps=p1[test_set]+p2[test_set]+p3
 ```
 
 
 ## 24. A partir de la variable K et en vous inspirant des questions précédentes, instanciez dans les variables f1, f2, f3 et f4 les termes successifs de (5). Vous remarquerez que certains termes ont déjà été calculés précédemment.
 
 ```{r}
-
+f1=K[,train_set]%*% A
+f2=as.numeric(-1/n*(t(A)%*%apply(K[train_set,train_set],1,sum)))
+f3=as.matrix(-1/n*apply(K[,train_set],1,sum))%*% t(as.matrix(apply(A,2,sum)))
+f4=1/(n^2)*sum(K[train_set,train_set])*apply(A,2,sum)
 ```
 
 
@@ -239,7 +251,11 @@ ps =
 nombre de lignes vaut le nombre de données tests et le nombre de colonne, le nombre d’axes principaux retenus).
 
 ```{r}
+f2bis=matrix(rep(f2,683), nrow=683,ncol=80,byrow=T)
 
+f4bis=matrix(rep(f4,683), nrow=683,ncol=80,byrow=T)
+
+fl=f1[test_set,]+f2bis[test_set,]+f3[test_set,]+f4bis[test_set,]
 ```
 
 
