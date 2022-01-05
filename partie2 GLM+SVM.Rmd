@@ -328,8 +328,78 @@ colAUC(all_pred, yTest, plotROC = FALSE)
 ```{r}
 ```
 
+# Neurones : 
+
 
 ```{r}
+
+# Packages : 
+library(neuralnet)
+library(MLmetrics)
+library(dplyr)
+library(pROC)
+library(caret)
+
+y <- as.factor(make.names(Train$Class))
+y
+XTrain_scaled$y <- y
+summary(XTrain_scaled)
+str(XTrain_scaled)
+
+ctrl  <- trainControl(method  = "cv",number  = 5, 
+                     summaryFunction = multiClassSummary, # Multiple metrics
+                     classProbs=T,# Required for the ROC curves
+                     savePredictions = T,
+                     verboseIter = TRUE)
+
+set.seed(150)
+
+mygrid <- expand.grid(.decay = c(1, 0.5, 0.3, 0.1, 0.001), .size = c(10, 12, 14,16))
+#decay is the regularization parameter to avoid over-fitting
+
+fit.mlp <- train(y~.-y, data = XTrain_scaled, 
+                 method = "nnet",
+                 trControl = ctrl, 
+                 act.fct= "logistic",
+                 maxit = 250,    # Maximum number of iterations
+                 tuneGrid = mygrid, #data.frame(size = 10, decay = 0),
+                 metric = "Accuracy", linout = FALSE)
+
+plot(fit.mlp)
+fit.mlp$finalModel
+plot(fit.mlp$finalModel)
+fit.mlp$bestTune
+fit.mlp$metric
+fit.mlp$times
+fit.mlp$modelInfo
+fit.mlp
+
+str(fit.mlp)
+
+
+prob_cv <- predict(fit.mlp, newdata=XTest_scaled,type = "prob")
+
+# Classes prédites : 
+y_pred = prob_cv %>% mutate('class'=names(.)[apply(., 1, which.max)])
+head(prob_cv)
+
+#Matrice de confusion :
+y_test= as.factor(unlist(yTest))
+conf2 <- confusionMatrix(as.factor(y_pred$class), y_test)
+conf2
+
+#F1_score 
+f1_score = conf2[["byClass"]][ , "F1"]
+mean(f1_score)
+
+#AUC
+
+rocurve = multiclass.roc(y_test , prob_cv, levels=levels(y_test))
+rocurve
+
+# AUC = 0.996
+
+
 ```
 
 
