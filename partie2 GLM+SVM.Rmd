@@ -1,6 +1,8 @@
 ---
 title: "Partie 2"
-output: pdf_document
+output:
+ pdf_document:
+ keep_tex: true
 ---
 
 
@@ -120,6 +122,7 @@ y = data[,17]
 ```{r}
 PieChart(Class, hole = 0, values = "%", data = data, main = "")
 ```
+
 ```{r}
 hist.data.frame(X[,c(1:4)])
 ```
@@ -181,8 +184,8 @@ XTest_scaled <- predict(preprocessParams,Test[,c(1:16)])
 
 
 ```{r}
-#print(nrow(Train_set))
-#print(nrow(Test_set))
+print(nrow(XTrain))
+print(nrow(XTest))
 ```
 
 
@@ -199,53 +202,67 @@ print(table(yTest))
 ## Modèle linéaire pénalisé par une fonction de régularisation elasticnet.
 
 ```{r}
-# alpha à définir avec gridsearch
-model <- cv.glmnet(as.matrix(XTrain_scaled), yTrain, alpha = 0.3,family = "multinomial")
+
+train_control <- trainControl(
+  method="cv",
+  number=5,
+  summaryFunction = multiClassSummary,
+  classProbs = TRUE,
+)
+
+grid <- expand.grid(
+  alpha = seq(0,1,by=0.1),
+  lambda = seq(0.1,1,by=0.1)
+)
+
 ```
 
+
 ```{r}
-summary(model)
+set.seed(42)
+
+model <- train(Class~.,
+               data=Train, 
+               method="glmnet",
+               family = "multinomial",
+               preProcess = c("center", "scale"), 
+               tuneGrid = grid,
+               metric = "Accuracy",
+               trControl = train_control)
+
 ```
+```{r}
+print(model)
+```
+```{r}
+model$bestTune$lambda
+```
+```{r}
+model$bestTune$alpha
+```
+
 
 ```{r}
 plot(model)
 ```
 ```{r}
-model$lambda.min
-```
-
-
-```{r}
-model$lambda.1se
+plot(model$finalModel)
 ```
 
 ```{r}
-coef(model,s = "lambda.min")
+predicted.class <- predict(model,newdata = XTest)
 ```
 
 ```{r}
-coef(model,s = "lambda.1se")
-```
-
-
-```{r}
-# Make predictions
-predicted.class <- model %>% predict(as.matrix(XTest_scaled),type="class")
-```
-
-```{r}
-#predicted.classes <- ifelse(probabilities > 0.5, "pos", "neg")
-# Model accuracy
 mean(predicted.class == Test$Class)
 ```
+
+
 ### Matrice de confusion
 
 ```{r}
 confusionMatrix(as.factor(predicted.class), Test$Class, positive = NULL, dnn = c("Prediction", "Reference"))
 ```
-
-## Réseau de neuronnes avec une couche cachée.
-
 
 ## SVM.
 
@@ -292,6 +309,7 @@ print(cm2)
 err2 = ((cm2[1,2] + cm2[2,1])/sum(cm2))*100
 print(err2)
 ```
+
 ```{r}
 pred=as.numeric(pred)
 pred=recode(pred, '1'=0, '2'=1)
