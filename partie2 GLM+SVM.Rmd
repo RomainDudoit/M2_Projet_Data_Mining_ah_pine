@@ -168,18 +168,12 @@ trainIndex <- createDataPartition(data$Class,p=0.7,list=F)
 Train<- data[trainIndex,]
 Test <- data[-trainIndex,]
 
-preprocessParams <- preProcess(Train[,c(1:16)], method=c("center","scale"))
-
-
 XTrain <- Train[,c(1:16)]
 yTrain <- Train[,"Class"] 
 
 XTest <- Test[,c(1:16)]
 yTest <- Test[,"Class"] 
 
-XTrain_scaled <- predict(preprocessParams,Train[,c(1:16)])
-
-XTest_scaled <- predict(preprocessParams,Test[,c(1:16)])
 ```
 
 
@@ -252,6 +246,12 @@ plot(model$finalModel)
 ```{r}
 predicted.class <- predict(model,newdata = XTest)
 ```
+
+```{r}
+predict(model,newdata = XTest)$
+```
+
+
 
 ```{r}
 mean(predicted.class == Test$Class)
