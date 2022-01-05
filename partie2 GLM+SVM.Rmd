@@ -329,11 +329,11 @@ colAUC(all_pred, yTest, plotROC = FALSE)
 ```
 
 # Neurones : 
-
+## Packages : 
 
 ```{r}
 
-# Packages : 
+
 library(neuralnet)
 library(MLmetrics)
 library(dplyr)
@@ -391,6 +391,10 @@ conf2
 #F1_score 
 f1_score = conf2[["byClass"]][ , "F1"]
 mean(f1_score)
+
+# Accuracy
+conf2$overall['Accuracy']
+
 
 #AUC
 
