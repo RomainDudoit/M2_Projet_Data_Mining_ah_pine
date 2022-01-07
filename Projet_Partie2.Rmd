@@ -1,10 +1,25 @@
 ---
-title: "Projet"
-author: "FRANCK"
+title: "Projet_Partie2"
+author: "FRANCK DORONZO, ROMAIN DUDOIT,MARIE VACHET"
 date: "07/01/2022"
-output: pdf_document
+output:
+  html_document:
+    df_print: paged
 ---
+## Partie 2
+L’objectif est ici d'etudier un cas préesentant un problème de prédiction que ce soit dans le cadre de la régression ou de la catégorisation. Vous devrez pour cela implémenter le code permettant de mettre en oeuvre les points suivants :
 
+— La lecture des données (que vous fournirez avec votre dossier en format .csv ou .xls ou .RData).
+— Le pré-traitement des données si nécessaire.
+
+— La validation croisée permettant d’évaluer les performances des méthodes suivantes : — Modèle linéaire pénalisé par une fonction de régularisation elasticnet.
+— Réseau de neuronnes avec une couche cachée.
+— SVM.
+
+— Autre m´ethode de votre choix sortant des techniques vues en cours (optionel).
+Pour chaque type de méthode, vous testerez plusieurs ensembles de paramètres.
+
+— Des graphiques permettant de comparer les résultats de chaque méthode avec les différents paramètres utilisés. — Des graphiques permettant de comparer les meilleurs modèles des trois types de méthodes.
 ```{r setup, include=FALSE}
 library(caret)
 library(xlsx)
@@ -19,20 +34,54 @@ library(pROC)
 library(e1071)
 library(caTools)
 ```
+## Lecture des données
+Notre jeu de données porte sur les haricots secs.
 
-## R Markdown
+Il comporte 13 611 observations (grains) pour 7 espèces différentes sur lesquelles nous souhaitons faire de la classification.
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Les données ont été obtenues après des étapes de segmentation et d'extraction de caractéristiques sur des images prises par un système de vision par ordinateur utilisant une caméra haute résolution.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Les variables explicatives sont au nombre de 16 et sont relatives aux caractéristiques des grains :
+
+1.) Area (A): La surface d'une zone de haricot et le nombre de pixels à l'intérieur de ses limites.
+
+2.) Perimeter (P): La circonférence d'un haricot est définie comme la longueur de sa bordure.
+
+3.) Major axis length (L): La distance entre les extrémités de la ligne la plus longue qui peut être tracée à partir d'un haricot.
+
+4.) Minor axis length (l): La plus longue ligne que l'on peut tracer à partir d'un haricot en étant perpendiculaire à l'axe principal.
+
+5.) Aspect ratio (K): Définit la relation entre L et l.
+
+6.) Eccentricity (Ec): Excentricité de l'ellipse ayant les mêmes moments que la région.
+
+7.) Convex area (C): Nombre de pixels dans le plus petit polygone convexe qui peut contenir la surface d'une graine de haricot.
+
+8.) Equivalent diameter (Ed): Le diamètre d'un cercle ayant la même surface que celle d'une graine de haricot.
+
+9.) Extent (Ex): Le rapport entre les pixels de la boîte englobante et la surface du haricot.
+
+10.) Solidity (S): Le rapport entre les pixels de la coquille convexe et ceux que l'on trouve dans les haricots.
+
+11.) Roundness (R): Calculée à l'aide de la formule suivante : (4piA)/(P^2)
+
+12.)Compactness (CO): Mesure la rondeur d'un objet : Ed/L
+
+13.)ShapeFactor1 (SF1) = L/A
+
+14.)ShapeFactor2 (SF2) = l/A
+
+15.)ShapeFactor3 (SF3)
+
+16.)ShapeFactor4 (SF4)
+
+17.) Class (Seker, Barbunya, Bombay, Cali, Dermosan, Horoz and Sira)
 
 ```{r cars}
 data = read.xlsx('Dry_Bean_Dataset.xlsx',sheetIndex = 1,stringsAsFactors=TRUE)
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
 
 ```{r pressure, echo=FALSE}
 head(data)
@@ -105,7 +154,7 @@ print(table(yTrain))
 # Distribution des classes dans les données de test 
 print(table(yTest))
 ```
-
+## Modèle linéaire pénalisé par une fonction de régularisation elasticnet.
 ```{r}
 train_control <- trainControl(
   method="cv",
@@ -157,9 +206,6 @@ plot(glmnet$finalModel)
 pred <- predict(glmnet,newdata = XTest)
 ```
 
-```{r}
-mean(predicted.class == Test$Class)
-```
 
 ```{r}
 cm_glmnet = confusionMatrix(as.factor(pred), Test$Class, positive = NULL, dnn = c("Prediction", "Reference"))
@@ -183,7 +229,7 @@ print(accuracy_glm)
 print(f1_glm)
 ```
 
-##SVM
+## SVM
 
 ```{r}
 ## Ne pas exécuter
@@ -216,7 +262,7 @@ f1_svm=F1_Score(yTest, pred, positive = NULL)
 ```
 
 
-## NEURONES
+## RESEAU DE NEURONES
 ```{r}
 y <- as.factor(make.names(Train$Class))
 ```
@@ -234,7 +280,7 @@ ctrl  <- trainControl(method  = "cv",number  = 5,
 
 set.seed(150)
 
-mygrid <- expand.grid(.decay = c( 0.1), .size = c(16))
+mygrid <- expand.grid(.decay = c(1, 0.5, 0.3, 0.1, 0.001), .size = c(10, 12, 14,16))
 #decay is the regularization parameter to avoid over-fitting
 
 fit.mlp <- train(y~.-y, data = XTrain_scaled, 
@@ -312,7 +358,9 @@ ggplot(comparaison_class,aes(fill=modèles,y=accuracy*100,x=espèces)) +
 
 ```{r}
 ggplot(comparaison,aes(fill=metrics,y=model_scores,x=models)) +
-    geom_bar(position="dodge",stat = "identity")
+    geom_bar(position=position_dodge(width=0.8),stat = "identity",width = 0.5) +
+    geom_text(aes(label=round(model_scores,digits=2)),angle=90,position=position_dodge(width=0.9),hjust=-0.1) 
+
 ```
 
 ```{r}
