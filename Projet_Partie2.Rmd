@@ -1,0 +1,325 @@
+---
+title: "Projet"
+author: "FRANCK"
+date: "07/01/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(caret)
+library(xlsx)
+library(ggplot2)
+library(lessR)
+library(Hmisc)
+library(dplyr)
+
+library(neuralnet)
+library(MLmetrics)
+library(pROC)
+library(e1071)
+library(caTools)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+data = read.xlsx('Dry_Bean_Dataset.xlsx',sheetIndex = 1,stringsAsFactors=TRUE)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+head(data)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+dim(data)
+```
+
+```{r}
+summary(data)
+```
+
+```{r}
+# test si présence de valeurs manquantes
+sum(!complete.cases(data))
+```
+
+```{r}
+ggplot(data = data, aes(x = Class)) +geom_bar()
+```
+
+```{r}
+X = data[,c(1:16)]
+y = data[,17]
+```
+
+```{r}
+PieChart(Class, hole = 0, values = "%", data = data, main = "")
+```
+
+```{r}
+hist.data.frame(X[,c(1:4)])
+hist.data.frame(X[,c(5:8)])
+hist.data.frame(X[,c(9:12)])
+hist.data.frame(X[,c(13:16)])
+```
+
+```{r}
+library(GGally)
+ggpairs(data, columns = 1:3, ggplot2::aes(colour=Class))
+ggpairs(data, columns = 4:7, ggplot2::aes(colour=Class))
+```
+
+```{r}
+trainIndex <- createDataPartition(data$Class,p=0.7,list=F)
+
+Train<- data[trainIndex,]
+Test <- data[-trainIndex,]
+
+XTrain <- Train[,c(1:16)]
+yTrain <- Train[,"Class"] 
+
+XTest <- Test[,c(1:16)]
+yTest <- Test[,"Class"] 
+
+
+preprocessParams <- preProcess(Train[,c(1:16)], method=c("center","scale"))
+XTrain_scaled <- predict(preprocessParams,Train[,c(1:16)])
+XTest_scaled <- predict(preprocessParams,Test[,c(1:16)])
+```
+
+```{r}
+# Distribution des classes dans les données de Train 
+print(table(yTrain))
+```
+
+```{r}
+# Distribution des classes dans les données de test 
+print(table(yTest))
+```
+
+```{r}
+train_control <- trainControl(
+  method="cv",
+  number=5,
+  summaryFunction = multiClassSummary,
+  classProbs = TRUE,
+)
+
+grid <- expand.grid(
+  alpha = seq(0,1,by=0.1),
+  lambda = seq(0.0001,0.1,length=20)
+)
+```
+
+```{r}
+set.seed(42)
+
+glmnet <- train(Class~.,
+               data=Train, 
+               method="glmnet",
+               family = "multinomial",
+               preProcess = c("center", "scale"), 
+               tuneGrid = grid,
+               metric = "Accuracy",
+               trControl = train_control)
+```
+
+
+
+
+
+```{r}
+#print(glmnet)
+```
+
+```{r}
+glmnet$bestTune$lambda
+```
+
+```{r}
+glmnet$bestTune$alpha
+```
+
+```{r}
+plot(glmnet$finalModel)
+```
+
+```{r}
+pred <- predict(glmnet,newdata = XTest)
+```
+
+```{r}
+mean(predicted.class == Test$Class)
+```
+
+```{r}
+cm_glmnet = confusionMatrix(as.factor(pred), Test$Class, positive = NULL, dnn = c("Prediction", "Reference"))
+cm_glmnet
+```
+
+```{r}
+prob = predict(glmnet, newdata = XTest,type="prob")
+auc_glm = multiclass.roc(yTest~as.matrix(prob),plot=FALSE)
+
+# Accuracy
+accuracy_glm = cm_glmnet$overall['Accuracy']
+accuracy_class_glm = cm_glmnet[["byClass"]][ , "Balanced Accuracy"]
+#F1_score 
+f1_glm=F1_Score(yTest, pred, positive = NULL)
+```
+
+```{r}
+print(auc_glm)
+print(accuracy_glm)
+print(f1_glm)
+```
+
+##SVM
+
+```{r}
+## Ne pas exécuter
+## Le meilleur modèle est C = 7 et kernel = radial
+
+# tuned = tune(svm,train.x=as.matrix(XTrain_scaled),
+# train.y=yTrain, data = data,
+# scale=F, type = "C-classification",
+# ranges = list(cost=seq(0.1, 10, 0.1),kernel= c("linear","radial","sigmoid","polynomial")),
+# tunecontrol=tune.control(cross=10))
+# tuned$performances
+```
+
+```{r}
+svm = svm(as.matrix(XTrain), yTrain, scale=T, type= "C-classification",kernel='radial',cost = 7,probability = TRUE)
+```
+
+```{r}
+pred = predict(svm, newdata = as.matrix(XTest),probability = TRUE)
+auc_svm = multiclass.roc(yTest~attr(pred,"probabilities"),plot=FALSE)
+
+#Matrice de confusion
+cm = confusionMatrix(as.factor(pred), Test$Class, positive = NULL, dnn = c("Prediction", "Reference"))
+print(cm)
+
+accuracy_svm = cm$overall['Accuracy']
+accuracy_class_svm = cm[["byClass"]][ , "Balanced Accuracy"]
+# F1 score
+f1_svm=F1_Score(yTest, pred, positive = NULL)
+```
+
+
+## NEURONES
+```{r}
+y <- as.factor(make.names(Train$Class))
+```
+
+```{r}
+XTrain_scaled$y <- y
+```
+
+```{r}
+ctrl  <- trainControl(method  = "cv",number  = 5, 
+                     summaryFunction = multiClassSummary, # Multiple metrics
+                     classProbs=T,# Required for the ROC curves
+                     savePredictions = T,
+                     )
+
+set.seed(150)
+
+mygrid <- expand.grid(.decay = c( 0.1), .size = c(16))
+#decay is the regularization parameter to avoid over-fitting
+
+fit.mlp <- train(y~.-y, data = XTrain_scaled, 
+                 method = "nnet",
+                 trControl = ctrl, 
+                 act.fct= "logistic",
+                 maxit = 250,    # Maximum number of iterations
+                 tuneGrid = mygrid, #data.frame(size = 10, decay = 0),
+                 metric = "Accuracy", linout = FALSE)
+```
+
+```{r}
+plot(fit.mlp)
+```
+
+```{r}
+prob_cv <- predict(fit.mlp, newdata=XTest_scaled,type = "prob")
+
+# Classes prédites : 
+y_pred = prob_cv %>% mutate('class'=names(.)[apply(., 1, which.max)])
+head(prob_cv)
+
+#Matrice de confusion :
+y_test= as.factor(unlist(yTest))
+conf2 <- confusionMatrix(as.factor(y_pred$class), Test$Class)
+conf2
+
+#F1_score 
+f1_nn = F1_Score(y_test, y_pred$class, positive = NULL)
+
+# Accuracy
+accuracy_nn = conf2$overall['Accuracy']
+accuracy_class_nn = conf2[["byClass"]][ , "Balanced Accuracy"]
+
+#AUC
+
+auc_nn = multiclass.roc(y_test , prob_cv, levels=levels(y_test))
+auc_nn
+
+# AUC = 0.996
+```
+
+```{r}
+model_scores =  c(auc_svm$auc,auc_nn$auc,auc_glm$auc,accuracy_svm,accuracy_nn,accuracy_glm,f1_svm,f1_nn,f1_glm)
+model_scores2 = c(accuracy_class_glm,accuracy_class_svm,accuracy_class_nn)
+```
+
+```{r}
+models = c("SVM","Neurones","RL pénalisée","SVM","Neurones","RL pénalisée","SVM","Neurones","RL pénalisée")
+```
+
+```{r}
+metrics = c("AUC", "AUC", "AUC","Accuracy","Accuracy","Accuracy","F1-Score","F1-Score","F1-Score")
+```
+
+```{r}
+comparaison = data.frame(models,metrics,model_scores)
+comparaison = comparaison[order(models),]
+
+
+comparaison_class = data.frame(modèles=c(rep("RL_Pénalisée",7),rep("SVM",7),rep("Neurones",7)),espèces = rep(levels(yTest),3),accuracy=model_scores2)
+
+comparaison_class
+```
+```{r}
+accuracy_class_glm
+```
+
+```{r}
+ggplot(comparaison_class,aes(fill=modèles,y=accuracy*100,x=espèces)) +
+    geom_bar(position=position_dodge(width=0.8),stat = "identity",width = 0.5) +
+    geom_text(aes(label=round(accuracy,digits = 2)),angle=90,position=position_dodge(width=0.9),hjust=-0.1) +
+    scale_y_continuous(limits = c(0,110))
+```
+
+```{r}
+ggplot(comparaison,aes(fill=metrics,y=model_scores,x=models)) +
+    geom_bar(position="dodge",stat = "identity")
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
